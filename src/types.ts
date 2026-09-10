@@ -15,6 +15,8 @@ export interface PluginConfig {
     whitelist_users: string[];
     /** 白名单群号列表 */
     whitelist_groups: string[];
+    /** 是否包含 CPU 型号 */
+    show_cpu_model: boolean;
     /** 是否包含 CPU 负载 */
     show_load: boolean;
     /** 是否包含运行时间 */
@@ -38,6 +40,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
     whitelist_only: true,
     whitelist_users: ['2171129194'],
     whitelist_groups: [],
+    show_cpu_model: true,
     show_load: true,
     show_uptime: true,
     show_ip: true,

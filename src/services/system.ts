@@ -81,22 +81,57 @@ function formatUptime(seconds: number): string {
  * 识别虚拟化架构 (KVM / LXC / Docker / 物理机等)
  */
 async function detectVirtualization(): Promise<string> {
+    // 优先检测容器与底层命名空间特征 (LXC / Docker 等)
     try {
-        const { stdout } = await execAsync('systemd-detect-virt');
-        const virt = stdout.trim();
+        // 1. 检测是否处于 LXC 容器中
+        // 在 Proxmox VE (PVE) LXC 中，/proc/1/environ 包含 container=lxc，或者 /proc/self/uid_map 映射以 100000 起始
+        if (fs.existsSync('/proc/1/environ')) {
+            const env = fs.readFileSync('/proc/1/environ', 'utf-8');
+            if (env.includes('container=lxc')) return 'LXC (虚拟化容器)';
+        }
+
+        // 检查 uid_map 容器映射特征 (非特权 LXC 容器通常 uid 0 映射宿主 100000)
+        if (fs.existsSync('/proc/self/uid_map')) {
+            const uidMap = fs.readFileSync('/proc/self/uid_map', 'utf-8');
+            if (uidMap.includes('100000')) {
+                return 'LXC (虚拟化容器)';
+            }
+        }
+
+        // 检查内核版本字符串是否为 PVE 内核
+        if (fs.existsSync('/proc/version')) {
+            const ver = fs.readFileSync('/proc/version', 'utf-8');
+            if (ver.toLowerCase().includes('-pve')) {
+                // 如果运行在 pve 内核并且在容器 namespace 中
+                return 'LXC (PVE 虚拟化容器)';
+            }
+        }
+
+        // 2. systemd-detect-virt 容器模式
+        const { stdout: virtContainer } = await execAsync('systemd-detect-virt -c').catch(() => ({ stdout: '' }));
+        const cVirt = virtContainer.trim().toLowerCase();
+        if (cVirt === 'lxc') return 'LXC (虚拟化容器)';
+
+        // 3. systemd-detect-virt 虚拟机模式
+        const { stdout: virtVm } = await execAsync('systemd-detect-virt -v').catch(() => ({ stdout: '' }));
+        const vVirt = virtVm.trim().toLowerCase();
+        if (vVirt && vVirt !== 'none') {
+            return `${vVirt.toUpperCase()} (虚拟化)`;
+        }
+
+        // 4. systemd-detect-virt 默认
+        const { stdout } = await execAsync('systemd-detect-virt').catch(() => ({ stdout: '' }));
+        const virt = stdout.trim().toLowerCase();
+        if (virt === 'lxc') return 'LXC (虚拟化容器)';
         if (virt === 'none') return '物理机 (Bare Metal)';
         if (virt === 'container-other' || virt === 'docker') return 'Docker (容器化)';
         if (virt) return `${virt.toUpperCase()} (虚拟化)`;
     } catch {
-        // 命令不存在或出错时尝试检测容器环境
+        // 命令不存在或出错时继续备用检测
     }
 
     try {
         if (fs.existsSync('/.dockerenv')) return 'Docker (容器化)';
-        if (fs.existsSync('/proc/1/environ')) {
-            const env = fs.readFileSync('/proc/1/environ', 'utf-8');
-            if (env.includes('container=lxc')) return 'LXC (虚拟化)';
-        }
     } catch {}
 
     return '未知/物理机';
@@ -254,11 +289,53 @@ async function getDiskUsage(): Promise<{ total: string; used: string; usage: num
 }
 
 /**
+ * 获取 CPU 详细型号与信息
+ */
+async function getCpuModel(): Promise<string> {
+    // 优先读取 lscpu (能最准识别 ARM64 如 Neoverse-N1、Apple M 系列等)
+    try {
+        const { stdout } = await execAsync('lscpu 2>/dev/null');
+        const match = stdout.match(/Model name:\s*(.+)/i);
+        if (match && match[1]?.trim()) {
+            return match[1].trim();
+        }
+    } catch {}
+
+    // 备用读取 /proc/cpuinfo
+    try {
+        if (fs.existsSync('/proc/cpuinfo')) {
+            const cpuInfo = fs.readFileSync('/proc/cpuinfo', 'utf-8');
+            const modelMatch = cpuInfo.match(/model name\s*:\s*(.+)/i);
+            if (modelMatch && modelMatch[1]?.trim()) {
+                return modelMatch[1].trim();
+            }
+            const hardwareMatch = cpuInfo.match(/Hardware\s*:\s*(.+)/i);
+            if (hardwareMatch && hardwareMatch[1]?.trim()) {
+                return hardwareMatch[1].trim();
+            }
+            // ARM 常见 CPU part
+            if (cpuInfo.includes('0xd0c')) {
+                return 'ARM Neoverse-N1';
+            }
+        }
+    } catch {}
+
+    // os.cpus() 回退
+    const cpus = os.cpus();
+    const model = cpus[0]?.model?.trim();
+    if (model && model !== 'unknown' && model !== '') {
+        return model;
+    }
+
+    return '未知处理器';
+}
+
+/**
  * 获取系统整体状态指标
  */
 export async function collectSystemMetrics(): Promise<SystemMetrics> {
     const cpus = os.cpus();
-    const cpuModel = cpus[0]?.model || '未知 CPU';
+    const cpuModel = await getCpuModel();
     const cpuCores = cpus.length;
     const cpuUsage = await getCpuUsagePercent();
 

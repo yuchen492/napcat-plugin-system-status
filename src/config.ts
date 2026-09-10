@@ -18,6 +18,7 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
         NapCatConfig.boolean('show_ip', '显示外网IP(脱敏)', DEFAULT_CONFIG.show_ip, '是否在状态卡片中展示脱敏IP'),
         NapCatConfig.boolean('show_location', '显示所属节点与机房', DEFAULT_CONFIG.show_location, '是否在状态卡片中展示节点归属与机房'),
         NapCatConfig.boolean('show_city', '显示当前城市', DEFAULT_CONFIG.show_city, '是否展示详细城市信息（获取不到时自动回退为节点位置）'),
+        NapCatConfig.boolean('show_cpu_model', '显示处理器型号', DEFAULT_CONFIG.show_cpu_model, '是否在系统环境下方展示 CPU 型号'),
         NapCatConfig.boolean('show_virt', '显示虚拟化架构', DEFAULT_CONFIG.show_virt, '是否显示 VPS 虚拟化类型 (KVM/LXC等)'),
         NapCatConfig.boolean('show_load', '显示系统负载', DEFAULT_CONFIG.show_load, '是否展示 1/5/15 分钟 Load Average'),
         NapCatConfig.boolean('show_uptime', '显示运行时长', DEFAULT_CONFIG.show_uptime, '是否展示系统持续运行时间'),

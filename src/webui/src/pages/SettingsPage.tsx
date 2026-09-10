@@ -189,6 +189,16 @@ export default function SettingsPage() {
                     <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-800 cursor-pointer">
                         <input
                             type="checkbox"
+                            checked={config.show_cpu_model !== false}
+                            onChange={e => setConfig({ ...config, show_cpu_model: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-600"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">展示处理器型号 (紧随系统环境)</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-800 cursor-pointer">
+                        <input
+                            type="checkbox"
                             checked={config.show_virt}
                             onChange={e => setConfig({ ...config, show_virt: e.target.checked })}
                             className="w-4 h-4 rounded text-blue-600"

@@ -31,6 +31,8 @@ export interface PluginConfig {
     show_uptime: boolean
     show_ip: boolean
     show_location: boolean
+    show_city: boolean
+    show_cpu_model: boolean
     show_virt: boolean
     debug: boolean
 }

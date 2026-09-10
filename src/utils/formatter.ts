@@ -12,6 +12,11 @@ export function formatSystemStatusMessage(metrics: SystemMetrics, config: Plugin
     // ⚙️ 系统环境
     lines.push(`⚙️ 系统环境：${metrics.osName} (${metrics.arch})`);
 
+    // 🧠 CPU 型号 (紧跟在系统环境下方)
+    if (config.show_cpu_model !== false && metrics.cpuModel) {
+        lines.push(`🧠 处理器型号：${metrics.cpuModel}`);
+    }
+
     // 🧩 虚拟化架构
     if (config.show_virt) {
         lines.push(`🧩 虚拟化架构：${metrics.virt}`);
