@@ -1,7 +1,7 @@
 {
   "name": "napcat-plugin-system-status",
   "plugin": "系统状态",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "main": "index.mjs",
   "description": "NapCatQQ 系统运行状态监控插件（支持资源占用、虚拟化架构、IP脱敏、机房归属、白名单与自身消息触发）",

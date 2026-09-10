@@ -65,8 +65,12 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                 </div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                     <div>
-                        <span className="text-gray-500 dark:text-gray-400">操作系统</span>
-                        <div className="font-medium text-gray-800 dark:text-gray-200 mt-1">{m?.osName} ({m?.arch})</div>
+                        <span className="text-gray-500 dark:text-gray-400">操作系统发行版</span>
+                        <div className="font-medium text-gray-800 dark:text-gray-200 mt-1">{m?.osName}</div>
+                    </div>
+                    <div>
+                        <span className="text-gray-500 dark:text-gray-400">系统内核与架构</span>
+                        <div className="font-medium text-gray-800 dark:text-gray-200 mt-1">{m?.osKernel || '未知'} ({m?.arch})</div>
                     </div>
                     <div>
                         <span className="text-gray-500 dark:text-gray-400">CPU 处理器型号</span>

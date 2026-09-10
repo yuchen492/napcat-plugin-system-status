@@ -14,10 +14,46 @@ class PluginState {
     public startTime: number = Date.now();
     public onConfigChange?: () => void;
 
+    private getStatsFilePath(): string {
+        if (!this.ctx?.configPath) {
+            return path.resolve(process.cwd(), 'stats.json');
+        }
+        if (this.ctx.configPath.endsWith('.json')) {
+            return path.resolve(path.dirname(this.ctx.configPath), 'stats.json');
+        }
+        return path.resolve(this.ctx.configPath, 'stats.json');
+    }
+
+    public loadStats(): void {
+        try {
+            const statsFile = this.getStatsFilePath();
+            if (fs.existsSync(statsFile)) {
+                const data = JSON.parse(fs.readFileSync(statsFile, 'utf-8'));
+                this.stats = { ...this.stats, ...data };
+            }
+        } catch (e) {
+            this.ctx?.logger.warn('加载统计数据失败:', e);
+        }
+    }
+
+    public saveStats(): void {
+        try {
+            const statsFile = this.getStatsFilePath();
+            const dir = path.dirname(statsFile);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(statsFile, JSON.stringify(this.stats, null, 2), 'utf-8');
+        } catch (e) {
+            this.ctx?.logger.warn('保存统计数据失败:', e);
+        }
+    }
+
     public init(ctx: NapCatPluginContext): void {
         this.ctx = ctx;
         this.startTime = Date.now();
         this.loadConfig();
+        this.loadStats();
     }
 
     private getConfigFilePath(): string {
@@ -79,6 +115,7 @@ class PluginState {
         const timeStr = now.toLocaleDateString('zh-CN', { hour12: false }) + ' ' + now.toLocaleTimeString('zh-CN', { hour12: false });
         this.stats.lastRequestedTime = timeStr;
         this.stats.lastRequestedUser = userId;
+        this.saveStats();
     }
 
     public getUptime(): number {

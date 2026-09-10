@@ -17,6 +17,8 @@ export interface PluginConfig {
     whitelist_groups: string[];
     /** 是否包含 CPU 型号 */
     show_cpu_model: boolean;
+    /** 是否包含操作系统内核 */
+    show_kernel: boolean;
     /** 是否包含 CPU 负载 */
     show_load: boolean;
     /** 是否包含运行时间 */
@@ -41,6 +43,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
     whitelist_users: ['2171129194'],
     whitelist_groups: [],
     show_cpu_model: true,
+    show_kernel: true,
     show_load: true,
     show_uptime: true,
     show_ip: true,
@@ -52,6 +55,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
 
 export interface SystemMetrics {
     osName: string;
+    osKernel: string;
     arch: string;
     virt: string;
     uptimeFormatted: string;

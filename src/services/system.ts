@@ -289,8 +289,26 @@ async function getDiskUsage(): Promise<{ total: string; used: string; usage: num
 }
 
 /**
- * 获取 CPU 详细型号与信息
+ * 获取操作系统发行版与真实发行名称 (如 Ubuntu 22.04.5 LTS / Debian 13 等)
  */
+function getOsDistribution(): { osName: string; osKernel: string; arch: string } {
+    const arch = os.arch();
+    const osKernel = `${os.type()} ${os.release()}`; // 例如 Linux 7.0.14-6-pve
+    let osName = `${os.type()} ${os.release()}`;
+
+    // 优先从 /etc/os-release 获取更人性化的发行版名称
+    try {
+        if (fs.existsSync('/etc/os-release')) {
+            const content = fs.readFileSync('/etc/os-release', 'utf-8');
+            const prettyMatch = content.match(/PRETTY_NAME="?([^"\n]+)"?/);
+            if (prettyMatch && prettyMatch[1]) {
+                osName = prettyMatch[1].trim();
+            }
+        }
+    } catch {}
+
+    return { osName, osKernel, arch };
+}
 async function getCpuModel(): Promise<string> {
     // 优先读取 lscpu (能最准识别 ARM64 如 Neoverse-N1、Apple M 系列等)
     try {
@@ -338,6 +356,7 @@ export async function collectSystemMetrics(): Promise<SystemMetrics> {
     const cpuModel = await getCpuModel();
     const cpuCores = cpus.length;
     const cpuUsage = await getCpuUsagePercent();
+    const { osName, osKernel, arch } = getOsDistribution();
 
     // 内存
     const totalMem = os.totalmem();
@@ -362,8 +381,9 @@ export async function collectSystemMetrics(): Promise<SystemMetrics> {
     const net = await fetchNetworkInfo();
 
     return {
-        osName: `${os.type()} ${os.release()}`,
-        arch: os.arch(),
+        osName,
+        osKernel,
+        arch,
         virt,
         uptimeFormatted,
         loadAvg,
