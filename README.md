@@ -58,6 +58,28 @@
 
 ---
 
+## 🎨 自定义插件头像 / 图标
+
+在 NapCat WebUI 的插件管理页面中，插件卡片右侧会显示插件头像。本插件自带专属小猫官帽头像，如果想要更换为您自己的自定义头像，支持以下两种方式：
+
+### 方式 1：直接放置图片（免重新构建，推荐最简）
+NapCat 后端支持自动识别插件配置目录下的图标，直接放置即可即时生效：
+1. 将准备好的头像图片重命名为 `icon.png`（建议正方形尺寸，如 256x256 或 512x512）。
+2. 将图片上传并放置在 NapCat 插件配置目录下：
+   ```bash
+   # 典型路径为 napcat 运行目录下的 config/plugins/ 目录：
+   napcat/config/plugins/napcat-plugin-system-status/icon.png
+   ```
+3. 刷新 NapCat WebUI 浏览器页面即可生效。
+
+### 方式 2：源码构建时自定义
+如果是拉取源码自行构建插件包：
+1. 直接替换项目根目录下的 `icon.png` 为您自己的图标文件。
+2. 项目的 `package.json` 已配置 `"icon": "icon.png"`，打包脚本会在执行 `npm run build` 时自动将图标同步至 `dist/` 构建产物中。
+3. 将打包好的插件部署到 NapCat 即可。
+
+---
+
 ## 🚀 安装部署
 
 ### 方法一：直接下载 Release 成品安装（推荐）
@@ -101,63 +123,41 @@ npm run build
 
 | 指令格式 | 说明 | 适用范围 |
 | :--- | :--- | :--- |
-| `/系统状态` | 默认标准触发指令（首选） | 私聊、群聊、自身发送 |
-| `#系统状态` | 备用触发前缀 | 私聊、群聊、自身发送 |
-| `系统状态` | 无前缀直发（可在 Web 控制台配置） | 私聊、群聊、自身发送 |
+| `/系统状态` | 默认指令，触发推送当前服务器系统状态面板 | 群聊 / 好友私聊 / Bot自身发送 |
+| `自定义指令` | 可在 WebUI 控制台或配置文件中自定义指令前缀 | 群聊 / 好友私聊 / Bot自身发送 |
 
-> 💡 **提示**：如果开启了仅限管理员白名单（默认开启），只有管理员 QQ 发送指令才会有响应，其他账号发送将保持静默。
+### 2. 权限说明
+- **管理员白名单**：在配置中加入指定 QQ 号，未在白名单内的非授权人员发送指令将完全无任何反馈。
+- **自身消息触发**：即便账号在其他客户端登录发送指令，只要配置了 `respond_self: true`，Bot 也会正常捕捉并响应。
 
 ---
 
 ## ⚙️ 配置文件说明
 
-插件首次运行后会在 NapCat 的配置目录生成配置文件 `napcat-plugin-system-status.json`，也可以直接通过 NapCat WebUI 管理后台的**插件设置**可视化修改：
+配置文件路径位于 NapCat 配置目录：`config/plugins/napcat-plugin-system-status/config.json`
 
 ```json
 {
+  "enabled": true,
+  "command_prefix": "/系统状态",
+  "respond_self": true,
   "whitelist_only": true,
-  "admin_users": ["2171129194"],
-  "allowed_groups": [],
-  "allow_self": true,
-  "commands": ["/系统状态", "#系统状态", "系统状态"],
+  "whitelist_users": ["12345678"],
+  "whitelist_groups": [],
+  "show_cpu_model": true,
+  "show_kernel": true,
+  "show_load": true,
+  "show_uptime": true,
   "show_ip": true,
   "show_location": true,
   "show_city": true,
-  "show_load": true,
-  "show_virtualization": true,
-  "custom_header": "🖥️ 【服务器运行状态】",
-  "custom_footer": ""
+  "show_virt": true,
+  "debug": false
 }
 ```
 
-### 配置项解析
-
-| 字段 | 类型 | 默认值 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `whitelist_only` | boolean | `true` | 是否仅白名单成员可查询。为 `true` 时阻断未经授权的调用 |
-| `admin_users` | string[] | `["2171129194"]` | 管理员 QQ 白名单列表（纯数字字符串） |
-| `allowed_groups` | string[] | `[]` | 允许查询的 QQ 群号列表（留空表示任意群内只要管理员发都生效） |
-| `allow_self` | boolean | `true` | 是否允许当前 Bot QQ 自身发送消息触发（适配手机端同号控制） |
-| `commands` | string[] | `[...]` | 触发命令关键字数组 |
-| `show_ip` | boolean | `true` | 是否在卡片中显示脱敏后的公网 IP |
-| `show_location` | boolean | `true` | 是否显示所属国家/地区及机房运营商 |
-| `show_city` | boolean | `true` | 是否显示精细解析的「当前城市」字段 |
-| `show_load` | boolean | `true` | 是否展示 1/5/15 分钟系统负载 |
-| `show_virtualization` | boolean | `true` | 是否展示虚拟化架构（KVM / LXC / Docker 等） |
-| `custom_header` | string | `🖥️ 【服务器运行状态】` | 卡片顶部自定义标题 |
-| `custom_footer` | string | `""` | 卡片底部自定义署名/小尾巴 |
-
 ---
 
-## 🛠️ 项目技术栈
+## 📄 License
 
-- **后端运行时**：Node.js ESM / TypeScript / Vite
-- **框架适配**：NapCat Plugin Framework (`napcat-types`)
-- **前端 WebUI**：React 18 / TailwindCSS / Lucide Icons / Vite Singlefile
-- **硬件与网络采集**：Linux `/proc` 原生采样 + Node.js OS 原生模块 + 外部容灾 GeoIP API
-
----
-
-## 📄 开源许可证
-
-本项目基于 [MIT License](LICENSE) 开源发布。欢迎提 PR 或 Issue 共同完善！
+MIT License © 2026 YunBai

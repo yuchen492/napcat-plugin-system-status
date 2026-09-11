@@ -91,6 +91,7 @@ function copyAssetsPlugin() {
                         main: pkg.main,
                         description: pkg.description,
                         author: pkg.author,
+                        icon: pkg.icon,
                         dependencies: pkg.dependencies,
                     };
                     if (pkg.napcat) {
@@ -101,6 +102,13 @@ function copyAssetsPlugin() {
                         JSON.stringify(distPkg, null, 2)
                     );
                     console.log('[copy-assets] 已生成精简 package.json');
+                // 复制插件图标 icon.png (如果存在)
+                const iconPath = resolve(__dirname, 'icon.png');
+                if (fs.existsSync(iconPath)) {
+                    fs.copyFileSync(iconPath, resolve(distDir, 'icon.png'));
+                    console.log('[copy-assets] 已复制 icon.png 到 dist 目录');
+                }
+
                 }
 
                 console.log('[copy-assets] 资源复制完成！');
