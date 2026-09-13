@@ -289,23 +289,82 @@ async function getDiskUsage(): Promise<{ total: string; used: string; usage: num
 }
 
 /**
- * 获取操作系统发行版与真实发行名称 (如 Ubuntu 22.04.5 LTS / Debian 13 等)
+ * 规范化架构名称 (arm64 -> aarch64, x64 -> x86_64 等)
+ */
+function getNormalizedArch(): string {
+    const rawArch = os.arch();
+    const archMap: Record<string, string> = {
+        x64: 'x86_64',
+        arm64: 'aarch64',
+        ia32: 'i386',
+        arm: 'armv7l',
+    };
+    return archMap[rawArch] || rawArch;
+}
+
+/**
+ * 获取操作系统发行版与真实发行名称 (直接穿透容器获取真实宿主系统环境)
  */
 function getOsDistribution(): { osName: string; osKernel: string; arch: string } {
-    const arch = os.arch();
+    const arch = getNormalizedArch();
     const osKernel = `${os.type()} ${os.release()}`; // 例如 Linux 7.0.14-6-pve
-    let osName = `${os.type()} ${os.release()}`;
+    let osName = '';
 
-    // 优先从 /etc/os-release 获取更人性化的发行版名称
-    try {
-        if (fs.existsSync('/etc/os-release')) {
-            const content = fs.readFileSync('/etc/os-release', 'utf-8');
-            const prettyMatch = content.match(/PRETTY_NAME="?([^"\n]+)"?/);
-            if (prettyMatch && prettyMatch[1]) {
-                osName = prettyMatch[1].trim();
+    // 1. 优先从容器内挂载的宿主机信息中读取真实 os-release
+    const hostOsReleasePaths = [
+        '/app/napcat/config/host-os-release',
+        '/host/etc/os-release',
+        '/host/usr/lib/os-release',
+    ];
+
+    for (const p of hostOsReleasePaths) {
+        try {
+            if (fs.existsSync(p)) {
+                const content = fs.readFileSync(p, 'utf-8');
+                const prettyMatch = content.match(/PRETTY_NAME="?([^"\n]+)"?/);
+                if (prettyMatch && prettyMatch[1]) {
+                    osName = prettyMatch[1].trim();
+                    break;
+                }
             }
-        }
-    } catch {}
+        } catch {}
+    }
+
+    // 2. 如果在 Docker/容器环境中且没有挂载 host-os-release，则穿透容器根据内核与底层信息反推真实宿主系统
+    if (!osName) {
+        try {
+            if (fs.existsSync('/proc/version')) {
+                const procVer = fs.readFileSync('/proc/version', 'utf-8');
+                // Proxmox VE 宿主或 PVE LXC 下的容器
+                if (procVer.includes('-pve')) {
+                    if (procVer.includes('Debian 14.')) {
+                        osName = 'Debian GNU/Linux 13 (trixie)';
+                    } else if (procVer.includes('Debian 13.')) {
+                        osName = 'Debian GNU/Linux 12 (bookworm)';
+                    } else {
+                        osName = 'Debian GNU/Linux (Proxmox VE)';
+                    }
+                }
+            }
+        } catch {}
+    }
+
+    // 3. 回退读取本地 /etc/os-release
+    if (!osName) {
+        try {
+            if (fs.existsSync('/etc/os-release')) {
+                const content = fs.readFileSync('/etc/os-release', 'utf-8');
+                const prettyMatch = content.match(/PRETTY_NAME="?([^"\n]+)"?/);
+                if (prettyMatch && prettyMatch[1]) {
+                    osName = prettyMatch[1].trim();
+                }
+            }
+        } catch {}
+    }
+
+    if (!osName) {
+        osName = `${os.type()} ${os.release()}`;
+    }
 
     return { osName, osKernel, arch };
 }
