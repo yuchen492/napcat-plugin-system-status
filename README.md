@@ -161,3 +161,32 @@ npm run build
 ## 📄 License
 
 MIT License © 2026 YunBai
+
+---
+
+## ❓ 常见问题：提示 `not in official plugin whitelist` 无法加载？
+
+若在 NapCat 启动日志中出现类似以下警告并导致插件被跳过：
+```text
+[WARN] [PluginLoader] Rejected napcat-plugin-system-status (napcat-plugin-system-status): not in official plugin whitelist
+```
+
+### 🔍 原因说明
+这是 **NapCat 官方在近期最新版本中引入的插件 ID 白名单限制**。官方默认仅允许加载内置指定的官方插件，导致非白名单内的第三方插件被拦截。
+
+### 🛠️ 解决方案（任选其一）
+
+#### 方案 A：解除 NapCat 核心的白名单限制（彻底放行所有第三方插件，推荐）
+- **Docker 容器环境**：
+  ```bash
+  docker exec -it <你的napcat容器名> sed -i 's/return "not in official plugin whitelist"/return null/g' /app/napcat/napcat.mjs
+  docker restart <你的napcat容器名>
+  ```
+- **源码 / 单文件运行环境**：
+  在 `napcat.mjs` 中搜索 `not in official plugin whitelist`，将该行返回值修改为 `return null;` 后重启 NapCat 即可。
+
+#### 方案 B：借用官方白名单插件 ID（免改核心）
+如果你的 NapCat 中未安装官方的 `napcat-plugin-cleaner`，可以直接借用该 ID 伪装放行：
+1. 进入 plugins 插件目录，将本插件目录重命名为 `napcat-plugin-cleaner`；
+2. 打开插件目录下的 `package.json`，将 `"name": "napcat-plugin-system-status"` 改为 `"name": "napcat-plugin-cleaner"`；
+3. 重启 NapCat 即可正常加载。
